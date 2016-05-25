@@ -15,6 +15,8 @@
 #include "error.c"
 #include "socket.c"
 
+#include "commands.c"
+
 
 
 int main(int argc, char *argv[]) {
@@ -66,12 +68,24 @@ int main(int argc, char *argv[]) {
       parseCommand(&command, buffer);
 
 
-      printf("Params: %s, %d, %d\n", command.hostname, command.type, command.transport);
+      printf("Params: %s, %d, %d, %s\n", command.hostname, command.type, command.transport, command.filename);
       fflush(stdout);
 
-      // while(1) {
-        connectToServerOther(&command);
-      // }
+
+      connectToServerOther(&command);
+
+      if(command.type == LIST) {
+        listCommand(buffer, 1000);
+      }
+      else if(command.type == GET) {
+        // printf("get file %s\n", command.filename);
+        getCommand(command.filename, buffer, 1000);
+        printf("Buffer: %s\n", buffer);
+      }
+
+      n = write(sockfd, buffer, 1000);
+      if (n < 0) error("ERROR writing to socket");
+
       exit(0);
     }
     else close(newsockfd);

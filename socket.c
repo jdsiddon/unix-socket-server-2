@@ -42,7 +42,7 @@ void createCommand(struct Param *params, char *buffer, int size) {
   strcat(buffer, tempBuff);
 
   // File name is present
-  if(params->filename) {
+  if(strlen(params->filename) > 0) {
     strcat(buffer, " ");
     strcat(buffer, params->filename);
   }
@@ -67,6 +67,8 @@ int parseCommand(struct Param *params, char *buffer) {
 
   while(param != NULL) {
 
+    printf("%s\n", param);
+
     if(paramCount == 0) {                 // Hostname
       strcpy(params->hostname, param);
     }
@@ -81,24 +83,22 @@ int parseCommand(struct Param *params, char *buffer) {
         return 0;                         // Invalid command.
       }
     }
-    else if(paramCount == 2 && params->type == LIST) {   // List, next arg will be reply port.
+    else if(paramCount == 2) {            // Type.
       params->transport = atoi(param);
     }
-    else if(paramCount == 2 && params->type == GET) {    // Get, next arg will be file name.
+    else if(params->type == GET && paramCount == 3) {    // Get, next arg will be file name.
       strcpy(params->filename, param);
-    }
-    else if(paramCount == 3 && params->type == GET) {    // Get, last arg will be reply port.
-      params->transport = atoi(param);
     }
 
     param = strtok(NULL, " ");
     paramCount++;
   }
 
-  if(params->type == GET && paramCount < 4) {            // Didn't provide enough args for get.
+
+  if(params->type == GET && paramCount < 3) {            // Didn't provide enough args for get.
     return 0;
   }
-  else if(params->type == LIST && paramCount > 3) {
+  else if(params->type == LIST && paramCount > 2) {
     return 0;
   }
 
@@ -228,15 +228,9 @@ void connectToServer (int sock, int portno) {
 
 void connectToServerOther(struct Param *params) {
   int n;
-  // char buffer[256];
-
-  // Connect to new connection.
   int sockfd;
   struct sockaddr_in serv_addr;
   struct hostent *server;
-
-  // printf("New Port: %d\n", portno);
-  // fflush(stdout);
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0)
@@ -255,7 +249,7 @@ void connectToServerOther(struct Param *params) {
     server->h_length);
   serv_addr.sin_port = htons(params->transport);
 
-
+  // Continue looping until connection is successful.
   while(1) {
     printf("Connecting to %d...\n", params->transport);
     fflush(stdout);
@@ -264,17 +258,15 @@ void connectToServerOther(struct Param *params) {
       printf("Unsuccessful Connection...\n");
       fflush(stdout);
 
-    } else {
+    } else {      // Connection was opened!
       printf("Successfully Connected!\n");
       fflush(stdout);
 
       break;
     }
-
   }
 
-
   // Write to server.
-  n = write(sockfd, "file 1 \n file 2\n", 17);
-  if (n < 0) error("ERROR writing to socket");
+  // n = write(sockfd, "file 1 \n file 2\n", 17);
+  // if (n < 0) error("ERROR writing to socket");
 }
