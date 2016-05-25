@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
+    char buffer[1000];
     struct Param serverParams;
 
     parseParams(argc, argv, &serverParams);
@@ -102,23 +102,22 @@ int main(int argc, char *argv[])
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
 
-    // printf("Please enter the message: ");
-    bzero(buffer,256);
 
-    sprintf(buffer, "%d", serverParams.transport);
+    createCommand(&serverParams, buffer, 1000);
 
-    printf("%s\n", buffer);
 
-    // fgets(buffer,255,stdin);
-    n = write(sockfd,buffer,strlen(buffer));
+    // sprintf(buffer, "%d", serverParams.transport);
+    printf("sending: %s\n", buffer);
 
+
+    n = write(sockfd, buffer, strlen(buffer));
     if (n < 0)
       error("ERROR writing to socket");
 
     createServer(serverParams.transport);
 
-    bzero(buffer,256);
-    n = read(sockfd,buffer,255);
+    bzero(buffer, 1000);
+    n = read(sockfd, buffer, 999);
     if (n < 0)
          error("ERROR reading from socket");
 

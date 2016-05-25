@@ -19,6 +19,98 @@ struct Param {
 };
 
 
+// Creates a command string in buffer with the following format:
+//  [hostname] [command type] [transport number] [filename]
+void createCommand(struct Param *params, char *buffer, int size) {
+  char tempBuff[1000];      // Temp buffer to hold converted integers.
+
+  // Connection successful, send command.
+  bzero(buffer, size);
+
+  // Hostname
+  strcpy(buffer, params->hostname);
+  strcat(buffer, " ");
+
+  // Command type
+  sprintf(tempBuff, "%d", params->type);
+  strcat(buffer, tempBuff);
+  strcat(buffer, " ");
+
+  // Transport port number
+  bzero(tempBuff, 1000);
+  sprintf(tempBuff, "%d", params->transport);
+  strcat(buffer, tempBuff);
+
+  // File name is present
+  if(params->filename) {
+    strcat(buffer, " ");
+    strcat(buffer, params->filename);
+  }
+  return;
+
+}
+
+
+
+
+/**************************************************
+** Function: parseCommand
+** Description: Receives a message from connected clients.
+** Parameters: int socket - socket identifier, char buff - buffer to store message from client.
+** Returns: 1 if client is still active, 0 if client is no longer active.
+**************************************************/
+int parseCommand(struct Param *params, char *buffer) {
+  char *param;
+  int paramCount = 0;
+
+  param = strtok(buffer, " ");
+
+  while(param != NULL) {
+
+    if(paramCount == 0) {                 // Hostname
+      strcpy(params->hostname, param);
+    }
+    else if(paramCount == 1) {            // Type
+      if(strcmp(param, "0") == 0) {       // Client requests list.
+        params->type = LIST;
+      }
+      else if(strcmp(param, "1") == 0) {  // Client requests a file.
+        params->type = GET;
+      }
+      else {
+        return 0;                         // Invalid command.
+      }
+    }
+    else if(paramCount == 2 && params->type == LIST) {   // List, next arg will be reply port.
+      params->transport = atoi(param);
+    }
+    else if(paramCount == 2 && params->type == GET) {    // Get, next arg will be file name.
+      strcpy(params->filename, param);
+    }
+    else if(paramCount == 3 && params->type == GET) {    // Get, last arg will be reply port.
+      params->transport = atoi(param);
+    }
+
+    param = strtok(NULL, " ");
+    paramCount++;
+  }
+
+  if(params->type == GET && paramCount < 4) {            // Didn't provide enough args for get.
+    return 0;
+  }
+  else if(params->type == LIST && paramCount > 3) {
+    return 0;
+  }
+
+  return 1;
+}
+
+
+
+
+
+
+
 /******** DOSTUFF() *********************
  There is a separate instance of this function
  for each connection.  It handles all communication
@@ -46,7 +138,6 @@ void createServer(int portno) {
   socklen_t clilen;
   struct sockaddr_in serv_addr, cli_addr;
 
-  printf("%d\n", portno);
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -60,7 +151,7 @@ void createServer(int portno) {
   serv_addr.sin_port = htons(portno);
 
   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-   error("ERROR on binding");
+    error("ERROR on binding");
 
   listen(sockfd,5);
   clilen = sizeof(cli_addr);
@@ -68,20 +159,20 @@ void createServer(int portno) {
   printf("Waiting for connections...\n");
 
   while (1) {
-     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
-     if (newsockfd < 0)
-         error("ERROR on accept");
+    if (newsockfd < 0)
+      error("ERROR on accept");
 
-     pid = fork();
-     if (pid < 0)
-         error("ERROR on fork");
-     if (pid == 0)  {
-         close(sockfd);
-         dostuff(newsockfd);
-         exit(0);
-     }
-     else close(newsockfd);
+    pid = fork();
+    if (pid < 0)
+      error("ERROR on fork");
+    if (pid == 0)  {
+      close(sockfd);
+      dostuff(newsockfd);
+      exit(0);
+    }
+    else close(newsockfd);
   } /* end of while */
   close(sockfd);
   return; /* we never get here */
@@ -99,81 +190,91 @@ void createServer(int portno) {
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-void connectToServer (int sock, int portno)
-{
-   int n;
-   char buffer[256];
+void connectToServer (int sock, int portno) {
+  int n;
+  // char buffer[256];
 
+  // Connect to new connection.
+  int sockfd;
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
 
-   // Connect to new connection.
-   int sockfd;
-   struct sockaddr_in serv_addr;
-   struct hostent *server;
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0)
+     error("ERROR opening socket");
+  server = gethostbyname("localhost");
 
+  if (server == NULL) {
+     fprintf(stderr,"ERROR, no such host\n");
+     exit(0);
+  }
 
-   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-   if (sockfd < 0)
-       error("ERROR opening socket");
-   server = gethostbyname("localhost");
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(portno);
 
-   if (server == NULL) {
-       fprintf(stderr,"ERROR, no such host\n");
-       exit(0);
-   }
-
-   bzero((char *) &serv_addr, sizeof(serv_addr));
-   serv_addr.sin_family = AF_INET;
-   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-   serv_addr.sin_port = htons(portno);
-
-   if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-       error("ERROR connecting");
+  if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+     error("ERROR connecting");
 
 
   n = write(sockfd,"I got your message",18);
   if (n < 0) error("ERROR writing to socket");
-
 }
 
 
 
 
 
+void connectToServerOther(struct Param *params) {
+  int n;
+  // char buffer[256];
 
-void connectToServerOther(int sock, int portno)
-{
-   int n;
-   char buffer[256];
+  // Connect to new connection.
+  int sockfd;
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
 
+  // printf("New Port: %d\n", portno);
+  // fflush(stdout);
 
-   // Connect to new connection.
-   int sockfd;
-   struct sockaddr_in serv_addr;
-   struct hostent *server;
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0)
+     error("ERROR opening socket");
 
-   printf("New Port: %d\n", portno);
-   fflush(stdout);
+  server = gethostbyname(params->hostname);
+  if (server == NULL) {
+     fprintf(stderr,"ERROR, no such host\n");
+     exit(0);
+  }
 
-   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-   if (sockfd < 0)
-       error("ERROR opening socket");
-   server = gethostbyname("localhost");
-
-   if (server == NULL) {
-       fprintf(stderr,"ERROR, no such host\n");
-       exit(0);
-   }
-
-   bzero((char *) &serv_addr, sizeof(serv_addr));
-   serv_addr.sin_family = AF_INET;
-   bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-   serv_addr.sin_port = htons(portno);
-
-   if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-       error("ERROR connecting");
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr,
+    (char *)&serv_addr.sin_addr.s_addr,
+    server->h_length);
+  serv_addr.sin_port = htons(params->transport);
 
 
-  n = write(sockfd,"I got your message",18);
+  while(1) {
+    printf("Connecting to %d...\n", params->transport);
+    fflush(stdout);
+
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+      printf("Unsuccessful Connection...\n");
+      fflush(stdout);
+
+    } else {
+      printf("Successfully Connected!\n");
+      fflush(stdout);
+
+      break;
+    }
+
+  }
+
+
+  // Write to server.
+  n = write(sockfd, "file 1 \n file 2\n", 17);
   if (n < 0) error("ERROR writing to socket");
-
 }
