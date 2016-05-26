@@ -194,8 +194,6 @@ void createServer(struct Param *server) {
   listen(sockfd,5);
   clilen = sizeof(cli_addr);
 
-  printf("Waiting for connections...\n");
-
   while (1) {
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
@@ -209,23 +207,24 @@ void createServer(struct Param *server) {
       close(sockfd);
       char readBuff[100000];                   // Big buffer to hold data.
 
-      if(server->type == LIST) {
-        printf("Receiving directory structure from %s:%d\n", server->hostname, server->transport);
-        fflush(stdout);
-      }
-      else if(server->type == GET) {
-        printf("Receiving \"%s\" from %s:%d\n", server->filename, server->hostname, server->transport);
-        fflush(stdout);
-      }
-
       readSocket(newsockfd, readBuff);         // Read data sent by server.
 
       if(server->type == GET) {                // Requested a file get, so save it.
-        saveFile(server->filename, readBuff);
-        printf("File transfer complete.\n");
-        fflush(stdout);
+        // Check if file was found.
+        char *message = strtok(readBuff, " ");
+        if(strcmp(message, "[ERROR]") == 0) {     // "[ERROR]" indicates file read was unsuccessful
+          message = strtok(NULL, "");
+          printf("%s:%d says %s\n", server->hostname, server->transport, message);
+          fflush(stdout);
+        } else {
+          saveFile(server->filename, readBuff);
+          printf("File transfer complete.\n");
+          fflush(stdout);
+        }
       }
       else if(server->type == LIST) {          // Requested file list, so print list.
+        printf("Receiving directory structure from %s:%d\n", server->hostname, server->transport);
+        fflush(stdout);
         printf("%s\n", readBuff);
         fflush(stdout);
       }
@@ -274,17 +273,7 @@ void connectToServer(struct Param *params) {
 
   // Continue looping until connection is successful.
   while(1) {
-    printf("Connecting to %d...\n", params->transport);
-    fflush(stdout);
-
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
-      printf("Unsuccessful Connection...\n");
-      fflush(stdout);
-
-    } else {      // Connection was opened!
-      printf("Successfully Connected!\n");
-      fflush(stdout);
-
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) == 0) {  // Connection is successful.
       break;
     }
   }

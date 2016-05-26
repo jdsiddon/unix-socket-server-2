@@ -1,8 +1,11 @@
-/* A simple server in the internet domain using TCP
-   The port number is passed as an argument
-   This version runs forever, forking off a separate
-   process for each connection
-*/
+/**************************************************
+** File: server.cpp
+** Author: Justin Siddon
+** Description: This file contains the code that starts up a simple file/command
+**  server on the passed port. It then returns the client requested data
+**  by connecting to the 'transport port number' passed by the client. The client
+**  sets up a server and the server connects, becoming a client of the client.
+**************************************************/
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -12,9 +15,9 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+// Custom libraries
 #include "error.c"
 #include "socket.c"
-
 #include "commands.c"
 
 
@@ -24,7 +27,7 @@ int main(int argc, char *argv[]) {
   socklen_t clilen;
   struct sockaddr_in serv_addr, cli_addr;
 
-  if (argc < 2) {
+  if (argc < 2) {     // Make sure they at leasted provided a port.
     fprintf(stderr,"ERROR, no port provided\n");
     exit(1);
   }
@@ -85,9 +88,16 @@ int main(int argc, char *argv[]) {
       else if(command.type == GET) {          // Client requested a file.
         printf("File \"%s\" requested on port %d.\n", command.filename, command.transport);
         fflush(stdout);
-        getCommand(command.filename, bigBuff);
-        printf("Sending \"%s\" to %s:%d.\n", command.filename, command.hostname, command.transport);
-        fflush(stdout);
+        int fileRead = getCommand(command.filename, bigBuff);
+        if(fileRead > 0) {        // File was found.
+          printf("Sending \"%s\" to %s:%d.\n", command.filename, command.hostname, command.transport);
+          fflush(stdout);
+        } else {                  // File was not found.
+          printf("File not found. Sending error message to %s:%d.\n", command.hostname, command.transport);
+          printf("%s\n", bigBuff);
+          fflush(stdout);
+        }
+
       }
 
       n = write(sockfd, bigBuff, 100000);

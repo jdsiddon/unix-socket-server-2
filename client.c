@@ -5,7 +5,6 @@
 **  Once it send a message to a server (in the correct format) it starts
 **  its own server based on the passed port for the server to connect to.
 **************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,17 +14,19 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+// Custom libraries.
 #include "error.c"
 #include "socket.c"
 
 
-// hostName is a pointer to a pointer to argv[1]
 /**************************************************
 ** Function: parseParams
-** Description: This function parses apart the parameters
-http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
-** Parameters: char *path, path the user would like to change directory to.
-** Returns: None
+** Description: This function parses apart the parameters the user passed in at the
+**  command line when starting the client.
+** Parameters: int count - total number of parameters passed
+**  char *params[] - array of parameters (just argv[])
+**  struct Param *param - struct to store the user params in.
+** Returns: Nothing
 **************************************************/
 void parseParams(int count, char* params[], struct Param *param ) {
 
@@ -65,10 +66,6 @@ int main(int argc, char *argv[]) {
   // Parse user passed in parameters and store in serverParams.
   parseParams(argc, argv, &serverParams);
 
-  // printf("Back from parsing params");
-  // printf("hostname: %s, contport: %d, transport: %d, req_type: %d, filename: %s\n",
-  // serverParams.hostname, serverParams.contport, serverParams.transport, serverParams.type, serverParams.filename);
-
   portno = serverParams.contport;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -89,11 +86,8 @@ int main(int argc, char *argv[]) {
   if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
     error("ERROR connecting");
 
-
   // Create a command from the user entered params and store it in the 'serverParams' struct.
   createCommand(&serverParams, buffer, 1000);
-
-  // printf("sending: %s\n", buffer);
 
   // Send command to server.
   n = write(sockfd, buffer, strlen(buffer));
@@ -103,13 +97,5 @@ int main(int argc, char *argv[]) {
   // Create server to receive data back from server.
   createServer(&serverParams);
 
-  // bzero(buffer, 1000);
-  // readSocket(sockfd);
-  // n = read(sockfd, buffer, 999);
-  // if (n < 0)
-  //   error("ERROR reading from socket");
-
-  // printf("fdafds\n");
-  // close(sockfd);
   return 0;
 }

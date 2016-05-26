@@ -1,3 +1,10 @@
+/**************************************************
+** File: client.c
+** Author: Justin Siddon
+** Description: This file processes the commands received by the server or clients.
+**  Has the GET command which returns the contents of a file into a buffer.
+**  Has the LIST command which returns the contents of a directory in a buffer.
+**************************************************/
 #include <stdio.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -46,24 +53,31 @@ void listCommand(char *buffer, int size) {
 **  Based off code at: http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
 ** Parameters: char *filename - name of file to read.
 **  char *buffer - buffer to place the file contents into.
-** Returns: Nothing
+** Returns: 1 if success (file available), 0 if not.
 **************************************************/
-void getCommand(char *filename, char *buffer) {
-  FILE *file = fopen(filename, "r");         // Open file for reading.
+int getCommand(char *filename, char *buffer) {
   char lineBuffer[100];
   char tempBuff[100000];
   int resultSize = 0;
+  FILE *file = fopen(filename, "r");         // Open file for reading.
+  int success = 1;
 
-  while(fgets(lineBuffer, 100, file) != NULL) {  // Read through each line in the file.
-    strcat(tempBuff, lineBuffer);
+  if(file == NULL) {          // File doesn't exist.
+    strcat(tempBuff, "[ERROR] FILE NOT FOUND\n"); // "[ERROR] indicates error to client."
+    success = 0;        // File not found. Failure :(
+
+  } else {                    // File opened.
+    while(fgets(lineBuffer, 100, file) != NULL) {  // Read through each line in the file.
+      strcat(tempBuff, lineBuffer);
+    }
+    fclose(file);   // Close file.
   }
 
-  resultSize = strlen(tempBuff);
+  resultSize = strlen(tempBuff);      // Get size of file.
 
   // Place the message size in front of the rest of the message.
   sprintf(buffer, "%d", resultSize);
   strcat(buffer, ":");
   strcat(buffer, tempBuff);
-
-  fclose(file);   // Close file.
+  return success;     // Sucess!
 }
