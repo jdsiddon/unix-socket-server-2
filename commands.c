@@ -14,7 +14,10 @@ http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
 void listCommand(char *buffer, int size) {
   DIR *dir;
   struct dirent *ep;
+  char tempBuff[100000];
+  int resultSize = 0;
 
+  bzero(tempBuff, 100000);
   bzero(buffer, size);
 
   dir = opendir("./");              // Open current directory.
@@ -22,22 +25,40 @@ void listCommand(char *buffer, int size) {
   if(dir != NULL) {
     while(ep = readdir(dir)) {
       printf("%s\n", ep->d_name);   // Print content name.
-      strcat(buffer, ep->d_name);
-      strcat(buffer, "\n");
+      strcat(tempBuff, ep->d_name);
+      strcat(tempBuff, "\n");
     }
     (void) closedir(dir);           // Listed all items, close directory.
   }
+  resultSize = strlen(tempBuff);
+
+  // printf("Length of Directory Contents: %d\n", resultSize);
+
+  // Place the message size in front of the rest of the message.
+  sprintf(buffer, "%d", resultSize);
+  strcat(buffer, ":");
+  strcat(buffer, tempBuff);
+
 }
 
 void getCommand(char *filename, char *buffer, int size) {
   FILE *file = fopen(filename, "r");         // Open file for reading.
   char lineBuffer[100];
+  char tempBuff[100000];
+  int resultSize = 0;
 
   while(fgets(lineBuffer, 100, file) != NULL) {  // Read through each line in the file.
     //printf("%s\n", buffer);
-    strcat(buffer, lineBuffer);
+    strcat(tempBuff, lineBuffer);
   }
 
-  printf("%s\n", buffer);
+  // printf("%s\n", buffer);
+  resultSize = strlen(tempBuff);
+
+  // Place the message size in front of the rest of the message.
+  sprintf(buffer, "%d", resultSize);
+  strcat(buffer, ":");
+  strcat(buffer, tempBuff);
+
   fclose(file);
 }

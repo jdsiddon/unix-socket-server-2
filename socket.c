@@ -19,6 +19,33 @@ struct Param {
 };
 
 
+// http://stackoverflow.com/questions/666601/what-is-the-correct-way-of-reading-from-a-tcp-socket-in-c-c
+void readSocket(int socket, char *returnBuff) {
+  char buffer[100000];
+  bzero(buffer, 100000);
+  char *sizeString;
+  int messageSize = 0;
+  int bytesRead = 0;
+
+
+  bytesRead = read(socket, buffer, 100000);   // Get first send to pluck off the total message size.
+  printf("%d\n", bytesRead);
+  sizeString = strtok(buffer, ":");           // Get value as string
+  messageSize = atoi(sizeString);             // Convert to integer.
+
+  strcpy(returnBuff, buffer);                 // Record data so far.
+
+  while (bytesRead < messageSize) {           // Keep reading data until got all.
+    bzero(buffer, 100000);
+    bytesRead += read(socket, buffer, messageSize - bytesRead);
+    strcat(returnBuff, buffer);
+  }
+
+  // printf("%s\n", returnBuff);
+
+  return;
+}
+
 // Creates a command string in buffer with the following format:
 //  [hostname] [command type] [transport number] [filename]
 void createCommand(struct Param *params, char *buffer, int size) {
@@ -55,9 +82,13 @@ void createCommand(struct Param *params, char *buffer, int size) {
 
 /**************************************************
 ** Function: parseCommand
-** Description: Receives a message from connected clients.
-** Parameters: int socket - socket identifier, char buff - buffer to store message from client.
-** Returns: 1 if client is still active, 0 if client is no longer active.
+** Description: Converts a command received by a connected socket client from a text
+**  buffer to a Param struct.
+**  buffer could be in two formats
+**  [hostname] [type] [return socket] [filename (only if type == GET)]
+** Parameters: struct Param *param - pointer to param struct, char *buffer - text
+**  that was sent to socket client.
+** Returns: 1 if command is good, 0 if command isn't valid.
 **************************************************/
 int parseCommand(struct Param *params, char *buffer) {
   char *param;
@@ -169,7 +200,10 @@ void createServer(int portno) {
       error("ERROR on fork");
     if (pid == 0)  {
       close(sockfd);
-      dostuff(newsockfd);
+      // dostuff(newsockfd);
+      char readBuff[100000];
+      readSocket(newsockfd, readBuff);
+      printf("%s\n", readBuff);
       exit(0);
     }
     else close(newsockfd);

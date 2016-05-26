@@ -1,3 +1,11 @@
+/**************************************************
+** File: client.c
+** Author: Justin Siddon
+** Description: This file provides the client interface to a file server.
+**  Once it send a message to a server (in the correct format) it starts
+**  its own server based on the passed port for the server to connect to.
+**************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,26 +18,15 @@
 #include "error.c"
 #include "socket.c"
 
-// void error(const char *msg)
-// {
-//     perror(msg);
-//     exit(0);
-// }
-//
-// void startServer();
-
-// enum req_type {LIST, GET};
-//
-// struct Param {
-//   char hostname[100];
-//   int contport;
-//   int transport;
-//   enum req_type type;
-//   char filename[100];
-// };
-//
 
 // hostName is a pointer to a pointer to argv[1]
+/**************************************************
+** Function: parseParams
+** Description: This function parses apart the parameters
+http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
+** Parameters: char *path, path the user would like to change directory to.
+** Returns: None
+**************************************************/
 void parseParams(int count, char* params[], struct Param *param ) {
 
   if(count < 5) {                  // Check correct command line arguments provided.
@@ -57,72 +54,62 @@ void parseParams(int count, char* params[], struct Param *param ) {
 }
 
 
-// struct Param {
-//   char hostname[100];
-//   int contport;
-//   int transport;
-//   enum req_type type;
-//   char filename[100];
-// };
-//
+int main(int argc, char *argv[]) {
+  int sockfd, portno, n;
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
+
+  char buffer[1000];
+  struct Param serverParams;
+
+  // Parse user passed in parameters and store in serverParams.
+  parseParams(argc, argv, &serverParams);
+
+  // printf("Back from parsing params");
+  // printf("hostname: %s, contport: %d, transport: %d, req_type: %d, filename: %s\n",
+  // serverParams.hostname, serverParams.contport, serverParams.transport, serverParams.type, serverParams.filename);
+
+  portno = serverParams.contport;
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0)
+    error("ERROR opening socket");
+
+  server = gethostbyname(serverParams.hostname);
+  if (server == NULL) {
+    fprintf(stderr,"ERROR, no such host\n");
+    exit(0);
+  }
+
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(portno);
+
+  if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+    error("ERROR connecting");
 
 
-int main(int argc, char *argv[])
-{
-    int sockfd, portno, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
+  // Create a command from the user entered params and store it in the 'serverParams' struct.
+  createCommand(&serverParams, buffer, 1000);
 
-    char buffer[1000];
-    struct Param serverParams;
+  // printf("sending: %s\n", buffer);
 
-    parseParams(argc, argv, &serverParams);
+  // Send command to server.
+  n = write(sockfd, buffer, strlen(buffer));
+  if (n < 0)
+    error("ERROR writing to socket");
 
-    printf("Back from parsing params");
-    printf("hostname: %s, contport: %d, transport: %d, req_type: %d, filename: %s\n",
-      serverParams.hostname, serverParams.contport, serverParams.transport, serverParams.type, serverParams.filename);
+  // Create server to receive data back from server.
+  createServer(serverParams.transport);
 
-    portno = serverParams.contport;
+  bzero(buffer, 1000);
+  // readSocket(sockfd);
+  // n = read(sockfd, buffer, 999);
+  // if (n < 0)
+  //   error("ERROR reading from socket");
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-        error("ERROR opening socket");
-
-    server = gethostbyname(serverParams.hostname);
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
-    }
-
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-    serv_addr.sin_port = htons(portno);
-
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-        error("ERROR connecting");
-
-
-    createCommand(&serverParams, buffer, 1000);
-
-
-    // sprintf(buffer, "%d", serverParams.transport);
-    printf("sending: %s\n", buffer);
-
-
-
-    n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0)
-      error("ERROR writing to socket");
-
-    createServer(serverParams.transport);
-
-    bzero(buffer, 1000);
-    n = read(sockfd, buffer, 999);
-    if (n < 0)
-      error("ERROR reading from socket");
-
-    printf("%s\n",buffer);
-    close(sockfd);
-    return 0;
+  printf("%s\n",buffer);
+  close(sockfd);
+  return 0;
 }

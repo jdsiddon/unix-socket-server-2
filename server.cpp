@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
   serv_addr.sin_port = htons(portno);
   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) error("ERROR on binding");
 
+  printf("Server open on %d\n", portno);
   // Listen on socket.
   listen(sockfd,5);
   clilen = sizeof(cli_addr);
@@ -68,22 +69,30 @@ int main(int argc, char *argv[]) {
       parseCommand(&command, buffer);
 
 
-      printf("Params: %s, %d, %d, %s\n", command.hostname, command.type, command.transport, command.filename);
-      fflush(stdout);
-
+      // printf("Params: %s, %d, %d, %s\n", command.hostname, command.type, command.transport, command.filename);
+      // fflush(stdout);
 
       connectToServerOther(&command);
 
+      char bigBuff[100000];
+      bzero(bigBuff, 100000);
       if(command.type == LIST) {
-        listCommand(buffer, 1000);
+        printf("List directory requested on port %d.\n", command.transport);
+        fflush(stdout);
+        listCommand(bigBuff, 100000);
+        printf("%s\n", bigBuff);
+        printf("Sending directory contents to %s:%d.\n", command.hostname, command.transport);
+        fflush(stdout);
       }
       else if(command.type == GET) {
-        // printf("get file %s\n", command.filename);
-        getCommand(command.filename, buffer, 1000);
-        printf("Buffer: %s\n", buffer);
+        printf("File \"%s\" requested on port %d.\n", command.filename, command.transport);
+        fflush(stdout);
+        getCommand(command.filename, bigBuff, 100000);
+        printf("Sending \"%s\" to %s:%d.\n", command.filename, command.hostname, command.transport);
+        fflush(stdout);
       }
 
-      n = write(sockfd, buffer, 1000);
+      n = write(sockfd, bigBuff, 100000);
       if (n < 0) error("ERROR writing to socket");
 
       exit(0);
