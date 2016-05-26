@@ -68,15 +68,13 @@ int main(int argc, char *argv[]) {
       // Parse command from client.
       parseCommand(&command, buffer);
 
-
-      // printf("Params: %s, %d, %d, %s\n", command.hostname, command.type, command.transport, command.filename);
-      // fflush(stdout);
-
+      // Connect to new server.
       connectToServerOther(&command);
 
       char bigBuff[100000];
       bzero(bigBuff, 100000);
-      if(command.type == LIST) {
+
+      if(command.type == LIST) {              // Client requested a list.
         printf("List directory requested on port %d.\n", command.transport);
         fflush(stdout);
         listCommand(bigBuff, 100000);
@@ -84,7 +82,7 @@ int main(int argc, char *argv[]) {
         printf("Sending directory contents to %s:%d.\n", command.hostname, command.transport);
         fflush(stdout);
       }
-      else if(command.type == GET) {
+      else if(command.type == GET) {          // Client requested a file.
         printf("File \"%s\" requested on port %d.\n", command.filename, command.transport);
         fflush(stdout);
         getCommand(command.filename, bigBuff, 100000);

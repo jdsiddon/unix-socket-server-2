@@ -27,21 +27,20 @@ void readSocket(int socket, char *returnBuff) {
   int messageSize = 0;
   int bytesRead = 0;
 
+  char *message;          // Pointer to message portion.
 
   bytesRead = read(socket, buffer, 100000);   // Get first send to pluck off the total message size.
-  printf("%d\n", bytesRead);
   sizeString = strtok(buffer, ":");           // Get value as string
   messageSize = atoi(sizeString);             // Convert to integer.
+  message = strtok(NULL, "");
 
-  strcpy(returnBuff, buffer);                 // Record data so far.
+  strcpy(returnBuff, message);                 // Record data so far/
 
   while (bytesRead < messageSize) {           // Keep reading data until got all.
     bzero(buffer, 100000);
     bytesRead += read(socket, buffer, messageSize - bytesRead);
     strcat(returnBuff, buffer);
   }
-
-  // printf("%s\n", returnBuff);
 
   return;
 }
@@ -200,10 +199,9 @@ void createServer(int portno) {
       error("ERROR on fork");
     if (pid == 0)  {
       close(sockfd);
-      // dostuff(newsockfd);
-      char readBuff[100000];
+      char readBuff[100000];                // Big buffer to hold data.
       readSocket(newsockfd, readBuff);
-      printf("%s\n", readBuff);
+      printf("%s\n", readBuff);             // Print out the data returned from Server.
       exit(0);
     }
     else close(newsockfd);

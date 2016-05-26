@@ -30,16 +30,15 @@ void listCommand(char *buffer, int size) {
     }
     (void) closedir(dir);           // Listed all items, close directory.
   }
-  resultSize = strlen(tempBuff);
 
-  // printf("Length of Directory Contents: %d\n", resultSize);
+  resultSize = strlen(tempBuff);
 
   // Place the message size in front of the rest of the message.
   sprintf(buffer, "%d", resultSize);
   strcat(buffer, ":");
   strcat(buffer, tempBuff);
-
 }
+
 
 void getCommand(char *filename, char *buffer, int size) {
   FILE *file = fopen(filename, "r");         // Open file for reading.
@@ -48,11 +47,9 @@ void getCommand(char *filename, char *buffer, int size) {
   int resultSize = 0;
 
   while(fgets(lineBuffer, 100, file) != NULL) {  // Read through each line in the file.
-    //printf("%s\n", buffer);
     strcat(tempBuff, lineBuffer);
   }
 
-  // printf("%s\n", buffer);
   resultSize = strlen(tempBuff);
 
   // Place the message size in front of the rest of the message.
