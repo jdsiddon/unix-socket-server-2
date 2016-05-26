@@ -97,13 +97,28 @@ void createCommand(struct Param *params, char *buffer, int size) {
 **  pointer to the data to store in the file.
 ** Returns: noting.
 **************************************************/
-void saveFile(char *filename, char *contents) {
-  FILE *file = fopen(filename, "w");
+int saveFile(char *filename, char *contents) {
+  FILE *file;
+  int success = 1;
+
+  file = fopen(filename, "r");
+
   if(file != NULL) {
-    fprintf(file, "%s\n", contents);                  // Write type to file.
+    printf("File already stored!\nSelect new file or delete the existing file to get a fresh copy!\n");                  // Write type to file.
     fclose(file);
+    success = 0;
+
+  } else {
+    file = fopen(filename, "w");
+    if(file != NULL) {
+      fprintf(file, "%s\n", contents);                  // Write type to file.
+      fclose(file);
+    } else {
+      success = 0;
+    }
   }
-  return;
+
+  return success;
 }
 
 
@@ -123,10 +138,8 @@ int parseCommand(struct Param *params, char *buffer) {
 
   param = strtok(buffer, " ");
 
+  // Loop through each passed parameter and create a struct.
   while(param != NULL) {
-
-    printf("%s\n", param);
-
     if(paramCount == 0) {                 // Hostname
       strcpy(params->hostname, param);
     }
@@ -217,9 +230,11 @@ void createServer(struct Param *server) {
           printf("%s:%d says %s\n", server->hostname, server->transport, message);
           fflush(stdout);
         } else {
-          saveFile(server->filename, readBuff);
-          printf("File transfer complete.\n");
-          fflush(stdout);
+          int saved = saveFile(server->filename, readBuff);
+          if(saved) {
+            printf("File transfer complete.\n");
+            fflush(stdout);
+          }
         }
       }
       else if(server->type == LIST) {          // Requested file list, so print list.

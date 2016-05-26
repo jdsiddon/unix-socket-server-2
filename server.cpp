@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
 
       // Parse command from client.
       parseCommand(&command, buffer);
+      printf("Connection from %s\n", command.hostname);
 
       // Connect to new server.
       connectToServer(&command);
@@ -94,7 +95,6 @@ int main(int argc, char *argv[]) {
           fflush(stdout);
         } else {                  // File was not found.
           printf("File not found. Sending error message to %s:%d.\n", command.hostname, command.transport);
-          printf("%s\n", bigBuff);
           fflush(stdout);
         }
 
