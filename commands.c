@@ -3,13 +3,13 @@
 #include <dirent.h>
 
 /**************************************************
-** Function: cdCommand
-** Description: This is a built in shell function to change the current working directory,
-**  to that specified by path. If path is blank, changes directory to that specified by
-**  by the HOME path variable in the users environment.
-http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
-** Parameters: char *path, path the user would like to change directory to.
-** Returns: None
+** Function: listCommand
+** Description: This function gets a list of files in the current directory and
+**  places it into the passed buffer.
+**  Based off code at: http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
+** Parameters: char *buffer - buffer to place folder contents into.
+**  int size - size of th passed buffer.
+** Returns: Nothing
 **************************************************/
 void listCommand(char *buffer, int size) {
   DIR *dir;
@@ -23,7 +23,7 @@ void listCommand(char *buffer, int size) {
   dir = opendir("./");              // Open current directory.
 
   if(dir != NULL) {
-    while(ep = readdir(dir)) {
+    while((ep = readdir(dir))) {
       printf("%s\n", ep->d_name);   // Print content name.
       strcat(tempBuff, ep->d_name);
       strcat(tempBuff, "\n");
@@ -39,8 +39,16 @@ void listCommand(char *buffer, int size) {
   strcat(buffer, tempBuff);
 }
 
-
-void getCommand(char *filename, char *buffer, int size) {
+/**************************************************
+** Function: getCommand
+** Description: This function opens the passed file and places its contents
+**  into the passed buffer.
+**  Based off code at: http://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
+** Parameters: char *filename - name of file to read.
+**  char *buffer - buffer to place the file contents into.
+** Returns: Nothing
+**************************************************/
+void getCommand(char *filename, char *buffer) {
   FILE *file = fopen(filename, "r");         // Open file for reading.
   char lineBuffer[100];
   char tempBuff[100000];
@@ -57,5 +65,5 @@ void getCommand(char *filename, char *buffer, int size) {
   strcat(buffer, ":");
   strcat(buffer, tempBuff);
 
-  fclose(file);
+  fclose(file);   // Close file.
 }

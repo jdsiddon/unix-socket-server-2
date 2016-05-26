@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
       parseCommand(&command, buffer);
 
       // Connect to new server.
-      connectToServerOther(&command);
+      connectToServer(&command);
 
       char bigBuff[100000];
       bzero(bigBuff, 100000);
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
       else if(command.type == GET) {          // Client requested a file.
         printf("File \"%s\" requested on port %d.\n", command.filename, command.transport);
         fflush(stdout);
-        getCommand(command.filename, bigBuff, 100000);
+        getCommand(command.filename, bigBuff);
         printf("Sending \"%s\" to %s:%d.\n", command.filename, command.hostname, command.transport);
         fflush(stdout);
       }

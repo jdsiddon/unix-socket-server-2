@@ -101,15 +101,15 @@ int main(int argc, char *argv[]) {
     error("ERROR writing to socket");
 
   // Create server to receive data back from server.
-  createServer(serverParams.transport);
+  createServer(&serverParams);
 
-  bzero(buffer, 1000);
+  // bzero(buffer, 1000);
   // readSocket(sockfd);
   // n = read(sockfd, buffer, 999);
   // if (n < 0)
   //   error("ERROR reading from socket");
 
-  printf("%s\n",buffer);
-  close(sockfd);
+  // printf("fdafds\n");
+  // close(sockfd);
   return 0;
 }

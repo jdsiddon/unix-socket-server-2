@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <wait.h>
 
 
 enum req_type {LIST, GET};
@@ -19,7 +20,14 @@ struct Param {
 };
 
 
-// http://stackoverflow.com/questions/666601/what-is-the-correct-way-of-reading-from-a-tcp-socket-in-c-c
+/**************************************************
+** Function: readSocket
+** Description: Reads all the data from the socket and places it into the passed buffer.
+**  based off code from: http://stackoverflow.com/questions/666601/what-is-the-correct-way-of-reading-from-a-tcp-socket-in-c-c
+** Parameters: int socket - socket to read from. char *returnBuff - buffer to store
+**  data read from the socket.
+** Returns: socket data stored in the passed buffer.
+**************************************************/
 void readSocket(int socket, char *returnBuff) {
   char buffer[100000];
   bzero(buffer, 100000);
@@ -45,8 +53,14 @@ void readSocket(int socket, char *returnBuff) {
   return;
 }
 
-// Creates a command string in buffer with the following format:
-//  [hostname] [command type] [transport number] [filename]
+/**************************************************
+** Function: createCommand
+** Description: Creates a command string in buffer with the following format:
+**  [hostname] [command type] [transport number] [filename]
+** Parameters: struct Param *params - requested data. char *buffer - command to be stored for sending
+**  int size - size of the passed buffer.
+** Returns: command in the passed buffer.
+**************************************************/
 void createCommand(struct Param *params, char *buffer, int size) {
   char tempBuff[1000];      // Temp buffer to hold converted integers.
 
@@ -76,7 +90,21 @@ void createCommand(struct Param *params, char *buffer, int size) {
 
 }
 
-
+/**************************************************
+** Function: saveFile
+** Description: Saves file to current folder.
+** Parameters: char *filename - filename to save the file as. char *contents
+**  pointer to the data to store in the file.
+** Returns: noting.
+**************************************************/
+void saveFile(char *filename, char *contents) {
+  FILE *file = fopen(filename, "w");
+  if(file != NULL) {
+    fprintf(file, "%s\n", contents);                  // Write type to file.
+    fclose(file);
+  }
+  return;
+}
 
 
 /**************************************************
@@ -135,36 +163,16 @@ int parseCommand(struct Param *params, char *buffer) {
   return 1;
 }
 
-
-
-
-
-
-
-/******** DOSTUFF() *********************
- There is a separate instance of this function
- for each connection.  It handles all communication
- once a connnection has been established.
- *****************************************/
-void dostuff (int sock)
-{
-   int n;
-   char buffer[256];
-
-   printf("In 'dostuff'\n");
-
-   bzero(buffer,256);
-   n = read(sock,buffer,255);
-   if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
-}
-
-
-
-void createServer(int portno) {
-  int sockfd, newsockfd, pid;
+/**************************************************
+** Function: createServer
+** Description: Creates the server side of socket based on the parameters
+**  passed in. Used for the client to host a socket for the server to connect back to
+**  to send its data to. Based off code from: http://www.linuxhowtos.org/C_C++/socket.htm
+** Parameters: struct Param *server - server attributes to set up.
+** Returns: Nothing.
+**************************************************/
+void createServer(struct Param *server) {
+  int sockfd, newsockfd, pid, status;
   socklen_t clilen;
   struct sockaddr_in serv_addr, cli_addr;
 
@@ -178,7 +186,7 @@ void createServer(int portno) {
 
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(portno);
+  serv_addr.sin_port = htons(server->transport);
 
   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     error("ERROR on binding");
@@ -199,67 +207,50 @@ void createServer(int portno) {
       error("ERROR on fork");
     if (pid == 0)  {
       close(sockfd);
-      char readBuff[100000];                // Big buffer to hold data.
-      readSocket(newsockfd, readBuff);
-      printf("%s\n", readBuff);             // Print out the data returned from Server.
+      char readBuff[100000];                   // Big buffer to hold data.
+
+      if(server->type == LIST) {
+        printf("Receiving directory structure from %s:%d\n", server->hostname, server->transport);
+        fflush(stdout);
+      }
+      else if(server->type == GET) {
+        printf("Receiving \"%s\" from %s:%d\n", server->filename, server->hostname, server->transport);
+        fflush(stdout);
+      }
+
+      readSocket(newsockfd, readBuff);         // Read data sent by server.
+
+      if(server->type == GET) {                // Requested a file get, so save it.
+        saveFile(server->filename, readBuff);
+        printf("File transfer complete.\n");
+        fflush(stdout);
+      }
+      else if(server->type == LIST) {          // Requested file list, so print list.
+        printf("%s\n", readBuff);
+        fflush(stdout);
+      }
+
       exit(0);
     }
-    else close(newsockfd);
-  } /* end of while */
-  close(sockfd);
-  return; /* we never get here */
+    else {
+      waitpid(0, &status, 0);                 // Wait for child to complete.
+      close(newsockfd);
+      return;
+    }
+  } /* end while */
+  return;
 }
 
 
 
-
-
-
-
-
-/******** DOSTUFF() *********************
- There is a separate instance of this function
- for each connection.  It handles all communication
- once a connnection has been established.
- *****************************************/
-void connectToServer (int sock, int portno) {
-  int n;
-  // char buffer[256];
-
-  // Connect to new connection.
-  int sockfd;
-  struct sockaddr_in serv_addr;
-  struct hostent *server;
-
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0)
-     error("ERROR opening socket");
-  server = gethostbyname("localhost");
-
-  if (server == NULL) {
-     fprintf(stderr,"ERROR, no such host\n");
-     exit(0);
-  }
-
-  bzero((char *) &serv_addr, sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-  serv_addr.sin_port = htons(portno);
-
-  if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-     error("ERROR connecting");
-
-
-  n = write(sockfd,"I got your message",18);
-  if (n < 0) error("ERROR writing to socket");
-}
-
-
-
-
-
-void connectToServerOther(struct Param *params) {
-  int n;
+/**************************************************
+** Function: connectToServer
+** Description: Connects to a server with the passed params in the
+**  Param struct.
+** Parameters: struct Param *server - server attributes to connect to.
+** Returns: Nothing.
+**************************************************/
+void connectToServer(struct Param *params) {
   int sockfd;
   struct sockaddr_in serv_addr;
   struct hostent *server;
@@ -297,8 +288,4 @@ void connectToServerOther(struct Param *params) {
       break;
     }
   }
-
-  // Write to server.
-  // n = write(sockfd, "file 1 \n file 2\n", 17);
-  // if (n < 0) error("ERROR writing to socket");
 }
