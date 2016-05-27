@@ -31,7 +31,7 @@ void listCommand(char *buffer, int size) {
 
   if(dir != NULL) {
     while((ep = readdir(dir))) {
-      printf("%s\n", ep->d_name);   // Print content name.
+      // printf("%s\n", ep->d_name);   // Print content name.
       strcat(tempBuff, ep->d_name);
       strcat(tempBuff, "\n");
     }
