@@ -73,7 +73,7 @@ def parseParams(params):
                 elif(p == "-g"):
                     serv['type'] = 1
                     if(len(params) != 6):
-                        print "ERROR: Only 6 params can be passed to a list (-g) command [hostname] [control port] -l [filename] [reply port]"
+                        print "ERROR: Only 6 params can be passed to a list (-g) command [hostname] [control port] -g [filename] [reply port]"
                         exit()
                 else:
                     print "ERROR: invalid command \"%s\", valid commands are -l or -g" % p
