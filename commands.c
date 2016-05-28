@@ -1,5 +1,5 @@
 /**************************************************
-** File: client.c
+** File: commands.c
 ** Author: Justin Siddon
 ** Description: This file processes the commands received by the server or clients.
 **  Has the GET command which returns the contents of a file into a buffer.

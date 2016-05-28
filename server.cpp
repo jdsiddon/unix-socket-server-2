@@ -17,7 +17,6 @@
 #include <netdb.h>
 
 // Custom libraries
-#include "error.c"
 #include "socket.c"
 #include "commands.c"
 

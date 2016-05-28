@@ -31,6 +31,19 @@ struct Param {
 
 
 /**************************************************
+** Function: error
+** Description: Displays error message and sets the exit status to fail.
+** Parameters: char *msg - error message to display
+** Returns: Nothing
+**************************************************/
+void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
+
+/**************************************************
 ** Function: readSocket
 ** Description: Reads all the data from the socket and places it into the passed buffer.
 **  based off code from: http://stackoverflow.com/questions/666601/what-is-the-correct-way-of-reading-from-a-tcp-socket-in-c-c
@@ -62,6 +75,7 @@ void readSocket(int socket, char *returnBuff) {
 
   return;
 }
+
 
 
 /**************************************************

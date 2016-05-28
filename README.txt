@@ -11,7 +11,7 @@ returned data gets transmitted over the port as specified by the client(transmis
 
 * Usage *
 1. Compile the server program
-  make server
+  g++ server.cpp -o ftserver
 
 2. Start the server
   ./ftserver [CONTROL PORT]
@@ -23,6 +23,8 @@ returned data gets transmitted over the port as specified by the client(transmis
   GET(-g): Will save the requested file in the current directory of the client
   LIST(-l): Will print the contents of the remote server directory to the client's console
 
+5. Clean server (remove)
+  rm ftserver
 
 * Valid Arguments *
 Server
